@@ -2,17 +2,38 @@
 
 import sys
 
+# operation codes:
+HLT  = 0b00000001
+LDI  = 0b10000010
+PRN  = 0b01000111
+
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.ram = [0]*256
+        self.reg = [0]*8
+        # self.reg[SP] = 0xf4
+
+        self.processCounter = 0
+        self.flags = 0
+        # self.interrupts = 1;
+        self.isPaused = False
+        # self.last_timer_int = None
+        self.instruction_sets_processCounter = False
+
+        self.branchTree = {
+            HLT: self.op_HLT,
+            LDI: self.op_LDI,
+            PRN: self.op_PRN
+        }
+        
 
     def load(self):
         """Load a program into memory."""
-
         address = 0
+
 
         # For now, we've just hardcoded a program:
 
@@ -29,6 +50,12 @@ class CPU:
         for instruction in program:
             self.ram[address] = instruction
             address += 1
+
+    def ram_read(self, index):
+        return self.ram[index]
+
+    def ram_write(self, index, value):
+        self.ram[index] = value
 
 
     def alu(self, op, reg_a, reg_b):
@@ -47,12 +74,12 @@ class CPU:
         """
 
         print(f"TRACE: %02X | %02X %02X %02X |" % (
-            self.pc,
+            self.processCounter,
             #self.fl,
             #self.ie,
-            self.ram_read(self.pc),
-            self.ram_read(self.pc + 1),
-            self.ram_read(self.pc + 2)
+            self.ram_read(self.processCounter),
+            self.ram_read(self.processCounter + 1),
+            self.ram_read(self.processCounter + 2)
         ), end='')
 
         for i in range(8):
@@ -62,4 +89,32 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        pass
+
+        while not self.isPaused:
+            ir = self.ram[self.processCounter]
+            operand_a = self.ram_read(self.processCounter + 1)
+            operand_b = self.ram_read(self.processCounter + 2)
+
+            instruction_size = ( ir >> 6 ) + 1
+            self.instruction_sets_processCounter = ( (ir >> 4) &0b1 ) == 1
+
+            if ir in self.branchTree:
+                self.branchTree[ir](operand_a, operand_b)
+            else:
+                raise Exception(f'Unknown Instruction {bin(ir)} at {hex(self.processCounter)}')
+
+            if not self.instruction_sets_processCounter:
+                self.processCounter += instruction_size
+
+    def op_HLT(self, operand_a, operand_b):
+        self.isPaused = True
+    
+    def op_LDI(self, operand_a, operand_b):
+        self.reg[operand_a] = operand_b
+    
+    def op_PRN(self, operand_a, operand_b):
+        print(self.reg[operand_a])
+
+
+
+
