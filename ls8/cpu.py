@@ -7,11 +7,13 @@ HLT  = 0b00000001
 LDI  = 0b10000010
 PRN  = 0b01000111
 MUL  = 0b10100010
+PUSH = 0b01000101
+POP  = 0b01000110
 
 # reserved registers
-IM = 5;
-IS = 6;
-SP = 7;
+IM = 5
+IS = 6
+SP = 7
 
 # flags
 FL_LT = 0b100
@@ -27,7 +29,7 @@ class CPU:
         """Construct a new CPU."""
         self.ram = [0]*256
         self.reg = [0]*8
-        # self.reg[SP] = 0xf4
+        self.reg[SP] = 0xf4
 
         self.processCounter = 0
         self.flags = 0
@@ -40,7 +42,9 @@ class CPU:
             HLT: self.op_HLT,
             LDI: self.op_LDI,
             PRN: self.op_PRN,
-            MUL: self.op_MUL
+            MUL: self.op_MUL,
+            PUSH: self.op_PUSH,
+            POP: self.op_POP
         }
         
 
@@ -57,6 +61,15 @@ class CPU:
             value = int(instruction, 2)
             self.ram[address] = value
             address += 1
+
+    def stack_push(self, val):
+        self.reg[SP] -= 1
+        self.ram_write(self.reg[SP], val)
+    
+    def stack_pop(self):
+        val = self.ram_read(self.reg[SP])
+        self.reg[SP] += 1
+        return val
 
     def ram_read(self, index):
         return self.ram[index]
@@ -126,4 +139,8 @@ class CPU:
     def op_MUL(self, operand_a, operand_b):
         self.alu("MUL", operand_a, operand_b)
 
-
+    def op_PUSH(self, operand_a, operand_b):
+        self.stack_push(self.reg[operand_a])
+    
+    def op_POP(self, operand_a, operand_b):
+        self.reg[operand_a] = self.stack_pop()
