@@ -8,7 +8,7 @@ from cpu import *
 def main(argv):
     cpu = CPU()
 
-    cpu.load()
+    cpu.load(argv[1])
     cpu.run()
 
     return 0

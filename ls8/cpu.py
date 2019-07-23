@@ -6,6 +6,19 @@ import sys
 HLT  = 0b00000001
 LDI  = 0b10000010
 PRN  = 0b01000111
+MUL  = 0b10100010
+
+# reserved registers
+IM = 5;
+IS = 6;
+SP = 7;
+
+# flags
+FL_LT = 0b100
+FL_GT = 0b010
+FL_EQ = 0b001
+FL_TIMER = 0b00000001
+FL_KEYBOARD = 0b00000010
 
 class CPU:
     """Main CPU class."""
@@ -26,29 +39,23 @@ class CPU:
         self.branchTree = {
             HLT: self.op_HLT,
             LDI: self.op_LDI,
-            PRN: self.op_PRN
+            PRN: self.op_PRN,
+            MUL: self.op_MUL
         }
         
 
-    def load(self):
+    def load(self, filename):
         """Load a program into memory."""
         address = 0
 
-
-        # For now, we've just hardcoded a program:
-
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
-
-        for instruction in program:
-            self.ram[address] = instruction
+        fp = open(filename, "r")
+        for line in fp:
+            # split by comment and strip empty spaces
+            instruction = line.split("#")[0].strip()
+            if instruction == "":
+                continue
+            value = int(instruction, 2)
+            self.ram[address] = value
             address += 1
 
     def ram_read(self, index):
@@ -63,7 +70,8 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -115,6 +123,7 @@ class CPU:
     def op_PRN(self, operand_a, operand_b):
         print(self.reg[operand_a])
 
-
+    def op_MUL(self, operand_a, operand_b):
+        self.alu("MUL", operand_a, operand_b)
 
 
