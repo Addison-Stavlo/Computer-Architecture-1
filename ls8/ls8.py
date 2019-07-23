@@ -5,7 +5,14 @@
 import sys
 from cpu import *
 
-cpu = CPU()
+def main(argv):
+    cpu = CPU()
 
-cpu.load()
-cpu.run()
+    cpu.load(argv[1])
+    cpu.run()
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
