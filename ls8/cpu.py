@@ -7,20 +7,14 @@ HLT  = 0b00000001
 LDI  = 0b10000010
 PRN  = 0b01000111
 MUL  = 0b10100010
+ADD =  0b10100000
 PUSH = 0b01000101
 POP  = 0b01000110
+CALL = 0b01010000
+RET  = 0b00010001
 
 # reserved registers
-IM = 5
-IS = 6
-SP = 7
-
-# flags
-FL_LT = 0b100
-FL_GT = 0b010
-FL_EQ = 0b001
-FL_TIMER = 0b00000001
-FL_KEYBOARD = 0b00000010
+SP = 7  # stack pointer
 
 class CPU:
     """Main CPU class."""
@@ -30,24 +24,21 @@ class CPU:
         self.ram = [0]*256
         self.reg = [0]*8
         self.reg[SP] = 0xf4
-
         self.processCounter = 0
-        self.flags = 0
-        # self.interrupts = 1;
         self.isPaused = False
-        # self.last_timer_int = None
-        self.instruction_sets_processCounter = False
 
-        self.branchTree = {
+        self.dispatch = {
             HLT: self.op_HLT,
             LDI: self.op_LDI,
             PRN: self.op_PRN,
             MUL: self.op_MUL,
             PUSH: self.op_PUSH,
-            POP: self.op_POP
+            POP: self.op_POP,
+            CALL: self.op_CALL,
+            RET: self.op_RET,
+            ADD: self.op_ADD
         }
         
-
     def load(self, filename):
         """Load a program into memory."""
         address = 0
@@ -117,14 +108,14 @@ class CPU:
             operand_b = self.ram_read(self.processCounter + 2)
 
             instruction_size = ( ir >> 6 ) + 1
-            self.instruction_sets_processCounter = ( (ir >> 4) &0b1 ) == 1
+            instruction_sets_processCounter = ( (ir >> 4) &0b1 ) == 1
 
-            if ir in self.branchTree:
-                self.branchTree[ir](operand_a, operand_b)
+            if ir in self.dispatch:
+                self.dispatch[ir](operand_a, operand_b)
             else:
                 raise Exception(f'Unknown Instruction {bin(ir)} at {hex(self.processCounter)}')
 
-            if not self.instruction_sets_processCounter:
+            if not instruction_sets_processCounter:
                 self.processCounter += instruction_size
 
     def op_HLT(self, operand_a, operand_b):
@@ -138,9 +129,19 @@ class CPU:
 
     def op_MUL(self, operand_a, operand_b):
         self.alu("MUL", operand_a, operand_b)
+    
+    def op_ADD(self, operand_a, operand_b):
+        self.alu("ADD", operand_a, operand_b)
 
     def op_PUSH(self, operand_a, operand_b):
         self.stack_push(self.reg[operand_a])
     
     def op_POP(self, operand_a, operand_b):
         self.reg[operand_a] = self.stack_pop()
+
+    def op_CALL(self, operand_a, operand_b):
+        self.stack_push(self.processCounter + 2)
+        self.processCounter = self.reg[operand_a]
+    
+    def op_RET(self, operand_a, operand_b):
+        self.processCounter = self.stack_pop()
